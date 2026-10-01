@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="MuViSeg: Multi-View Segment Correspondences from Dense Geometry Priors. ACCV 2026.">
+<meta name="keywords" content="segment matching, 3D foundation models, multi-view correspondence, topological navigation, MASt3R, VGGT">
+<meta name="author" content="Denis Fatykhoph">
+
+<!-- Link previews (X, Telegram, Slack). Replace the two URLs below with your real site address
+     once it is live, e.g. https://muviseg.github.io/static/images/teaser.png -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="MuViSeg: Multi-View Segment Correspondences from Dense Geometry Priors">
+<meta property="og:description" content="A joint multi-view segment matcher on frozen 3D foundation features. ACCV 2026.">
+<meta property="og:image" content="REPLACE_WITH_SITE_URL/static/images/teaser.png">
+<meta property="og:url" content="REPLACE_WITH_SITE_URL/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MuViSeg: Multi-View Segment Correspondences from Dense Geometry Priors">
+<meta name="twitter:description" content="A joint multi-view segment matcher on frozen 3D foundation features. ACCV 2026.">
+<meta name="twitter:image" content="REPLACE_WITH_SITE_URL/static/images/teaser.png">
+
+<title>MuViSeg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 720px reading column on warm paper; figures and wide tables break out to 1120px.
+   Numbered eyebrows track the paper's own argument: question -> three heads -> regime-split evidence. */
+:root{
+  --paper:#f3f0e8;
+  --surface:#fbf9f4;
+  --figure:#faf8f3;          /* matches the background baked into the plots */
+  --ink:#1b1a16;
+  --muted:#6c675a;
+  --rule:#dbd5c6;
+  --accent:#1f6b5e;          /* teal of the trainable blocks in Fig. 1 */
+  --accent-soft:#e2ece8;
+  --ours:#c2592c;            /* orange of the "main contribution" callout */
+  --ours-soft:#f6e6dc;
+  --font-display:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --font-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#15140f;--surface:#1e1c17;--figure:#f2efe8;--ink:#ece7db;--muted:#9a9384;--rule:#35322b;
+    --accent:#6fb3a4;--accent-soft:#1d2b28;--ours:#e09465;--ours-soft:#32241c;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15140f;--surface:#1e1c17;--figure:#f2efe8;--ink:#ece7db;--muted:#9a9384;--rule:#35322b;
+  --accent:#6fb3a4;--accent-soft:#1d2b28;--ours:#e09465;--ours-soft:#32241c;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.65;margin:0}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 32%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+img{max-width:100%;display:block}
+sup{font-family:var(--font-mono);font-size:9.5px;color:var(--accent);vertical-align:super}
+
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--paper) 90%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.nav-in{max-width:1120px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.nav-mark{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border:0}
+.nav-links{display:flex;gap:15px;margin-left:auto;flex-wrap:wrap}
+.nav-links a{font-size:13px;color:var(--muted);border:0}
+.nav-links a:hover{color:var(--ink)}
+
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px}
+.col{max-width:720px;margin:0 auto}
+
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(2.4rem,6.4vw,4.2rem);line-height:1.02;
+  letter-spacing:-.012em;margin:0 0 10px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:400;font-size:clamp(1.7rem,3.6vw,2.45rem);line-height:1.12;
+  margin:0 0 14px;text-wrap:balance}
+h3{font-size:1rem;font-weight:600;margin:28px 0 8px;letter-spacing:-.005em}
+p{margin:0 0 16px}
+.lede{font-size:1.07rem}
+em{font-style:italic}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
+  display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{padding-block:clamp(44px,7vw,76px);border-top:1px solid var(--rule)}
+.hero{border-top:0}
+
+.venue{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11.5px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:5px 13px;margin-bottom:24px}
+.hero{padding-block:clamp(44px,7.5vw,84px) clamp(28px,4vw,44px)}
+.subtitle{font-family:var(--font-display);font-style:italic;font-size:clamp(1.2rem,2.7vw,1.7rem);color:var(--muted);
+  margin:0 0 30px;line-height:1.26}
+.authors{font-size:15.5px;line-height:1.95;margin:0 0 8px}
+.affil{font-size:13.5px;color:var(--muted);margin:0 0 2px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+
+.btns{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500;padding:8px 16px;border-radius:999px;
+  border:1px solid var(--rule);background:var(--surface);color:var(--ink);transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+.btn .arw{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fbf9f4}
+.btn-primary:hover{background:var(--accent);filter:brightness(1.1)}
+.btn-primary .arw{color:#fbf9f4}
+
+figure{margin:0}
+.figbox{background:var(--figure);border:1px solid var(--rule);border-radius:3px;padding:14px;overflow:hidden}
+figcaption{font-size:13.5px;color:var(--muted);line-height:1.56;margin-top:12px}
+figcaption b{color:var(--ink);font-weight:600}
+.bleed{max-width:1120px;margin-inline:auto}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+.t-wide table{min-width:760px}
+.t-mid table{min-width:560px}
+th,td{padding:6px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--rule)}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:188px}
+thead th{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+thead th.grp{text-align:center;border-bottom:1px solid var(--rule)}
+tbody tr:last-child td{border-bottom:0}
+td.sep,th.sep{border-left:1px solid var(--rule)}
+tr.rule-top td{border-top:1px solid var(--rule)}
+tr.ours td{background:var(--ours-soft)}
+tr.ours td:first-child{font-weight:600}
+b.best{font-weight:600}
+u.second{text-decoration:underline;text-underline-offset:2px;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.tcap{font-size:13px;color:var(--muted);margin:10px 0 0;max-width:72ch}
+.tcap b{color:var(--ink);font-weight:600}
+
+.facts{list-style:none;padding:0;margin:0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px}
+.facts li{background:var(--surface);padding:12px 15px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.facts .k{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);min-width:132px}
+.facts .v{flex:1;min-width:0;font-size:14.5px}
+
+.heads{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:16px;margin-top:22px}
+.head{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:16px 17px;display:flex;flex-direction:column;gap:7px}
+.head.main{border-color:var(--ours);background:var(--ours-soft)}
+.head .tag{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.head.main .tag{color:var(--ours)}
+.head h4{margin:0;font-size:15px;font-weight:600;font-family:var(--font-mono);letter-spacing:-.01em}
+.head p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.55}
+.head .params{font-family:var(--font-mono);font-size:11.5px;color:var(--ink);margin-top:auto;padding-top:6px}
+
+.hyp{list-style:none;padding:0;margin:0 0 6px;display:grid;gap:14px}
+.hyp li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline}
+.hyp .n{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--accent);letter-spacing:.06em}
+.hyp .b{font-size:15px}
+.hyp .verdict{display:block;font-size:13.5px;color:var(--muted);margin-top:3px}
+
+.callout{border-left:2px solid var(--accent);background:var(--accent-soft);padding:14px 17px;border-radius:0 3px 3px 0;
+  font-size:14.5px;line-height:1.6}
+.callout p:last-child{margin:0}
+
+ul.plain{padding-left:19px;margin:0 0 16px}
+ul.plain li{margin-bottom:8px}
+
+.bib{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.bib pre{margin:0;padding:18px;overflow-x:auto;font-family:var(--font-mono);font-size:12.5px;line-height:1.6;color:var(--ink)}
+.copy{position:absolute;top:10px;right:10px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 11px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);color:var(--muted);cursor:pointer}
+.copy:hover{color:var(--ink);border-color:var(--accent)}
+
+footer{border-top:1px solid var(--rule);padding-block:30px 46px;font-size:13px;color:var(--muted)}
+footer .row{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+footer .row .end{margin-left:auto}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style><style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img,video{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-in">
+    <a class="nav-mark" href="#top">MuViSeg</a>
+    <div class="nav-links">
+      <a href="#abstract">Abstract</a>
+      <a href="#question">Question</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a href="#sweep">Views</a>
+      <a href="#robot">Robot</a>
+      <a href="#navigation">Navigation</a>
+      <a href="#bibtex">BibTeX</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap" id="top">
+
+<section class="hero">
+  <div class="col">
+    <span class="venue">ACCV 2026 · Accepted</span>
+    <h1>MuViSeg</h1>
+    <p class="subtitle">Multi-view segment correspondences from dense geometry priors</p>
+
+    <p class="authors">
+      Denis Fatykhoph, Timur Akhtyamov, Konstantin Pakulev, German Devchich, Gonzalo Ferrer
+    </p>
+    <p class="affil">Applied AI Institute, Moscow, Russia</p>
+    <p class="note">Asian Conference on Computer Vision (ACCV), 2026</p>
+
+    <div class="btns">
+      <a class="btn btn-primary" href="static/paper.pdf">Paper <span class="arw">↗</span></a>
+      <a class="btn" href="#">arXiv <span class="arw">↗</span></a>
+      <a class="btn" href="#">Code <span class="arw">↗</span></a>
+      <a class="btn" href="#bibtex">BibTeX</a>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="bleed">
+    <figure>
+      <div class="figbox"><img src="static/images/teaser.png" alt="Four views of a meeting room; segment tokens from all views enter one shared attention sequence, and predicted segment matches are drawn as ribbons between view 1 and view 4 across a 104-degree rotation." width="2000" height="1046"></div>
+      <figcaption><b>Joint multi-view attention recovers segment correspondences across a 104° viewpoint change.</b> Segments from all <em>N</em> views are concatenated into one sequence with per-view position embeddings, so any segment can attend to any other. Ground-truth masks are inputs; ribbons show accepted matches.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="abstract">
+  <div class="col">
+    <div class="eyebrow">01 — Abstract</div>
+    <p class="lede">Object-level mapping and navigation require correspondences between whole instance segments rather than pixels or keypoints. We study how frozen 3D foundation features should be processed for segment matching and introduce MuViSeg: a learned pairwise attention head on MASt3R, multi-scale VGGT feature fusion, and a joint multi-view head that reasons over segments from several views to recover transitive matches.</p>
+    <p>In zero-shot evaluation on Replica and Virtual KITTI 2 across 0°–180° viewpoint changes, the MASt3R head improves over a Sinkhorn matcher by 4.85 and 25.9 AUPRC points, respectively. The multi-view head is strongest among our heads at the widest Replica baselines, although Sinkhorn remains competitive. Across 102 HM3D navigation episodes, direct segment matchers and sparse keypoint aggregation are statistically indistinguishable, while RoMa's dense matches voted into masks score 13.72–17.98 SPL points lower than direct segment matching.</p>
+    <p class="note" style="margin-top:22px"><span style="font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;font-size:10.5px">Keywords</span> &nbsp; Segment matching · 3D foundation models · Multi-view correspondence · Topological navigation</p>
+  </div>
+</section>
+
+<section id="question">
+  <div class="col">
+    <div class="eyebrow">02 — The question</div>
+    <h2>What is the most effective way to process segments for matching?</h2>
+    <p>A robot revisiting a room has to decide whether <em>this chair seen now is the same chair seen a minute ago</em>. Sparse and dense matchers answer at the wrong level: a downstream system must recover object identity by voting matches inside a mask, and the associations are only as reliable as that voting rule. We take the segment-level route and test three concrete pipelines, each a different answer to the question above.</p>
+    <ul class="hyp">
+      <li><span class="n">H1</span><span class="b">Matching capacity is better spent in a learned <em>cross-segment</em> head than before the matcher.
+        <span class="verdict">Supported at small-to-moderate baselines and outdoors; it reverses past 135° indoors.</span></span></li>
+      <li><span class="n">H2</span><span class="b">Preserving multi-scale spatial detail up to the mask boundary yields sharper per-segment descriptors than late pooling.
+        <span class="verdict">Supported: DPT fusion gives +2.8 AUPRC over single-layer pooling on ScanNet++ validation.</span></span></li>
+      <li><span class="n">H3</span><span class="b">Matching should not be done one pair at a time: segments from several views should be scored <em>jointly</em>.
+        <span class="verdict">The method we propose. Strongest among our heads exactly where the baseline is widest.</span></span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="method">
+  <div class="col">
+    <div class="eyebrow">03 — Method</div>
+    <h2>One template, three heads.</h2>
+    <p>A frozen backbone produces per-patch features, a class-agnostic segmenter partitions each image into instance masks, masked average pooling gives one descriptor per segment, and a head refines those descriptors and predicts correspondences. The three variants differ in where capacity sits, which backbone feeds it, and how much context the head sees.</p>
+  </div>
+
+  <div class="bleed" style="margin-block:26px">
+    <figure>
+      <div class="figbox"><img src="static/images/architecture.png" alt="Architecture diagram in two stages: segment encoding through frozen MASt3R or frozen VGGT with DPT fusion, mask pooling and projection; then joint multi-view matching where view tokens plus learned view embeddings are concatenated into one sequence refined by joint self-attention, with pairwise alternatives shown at the right." width="1900" height="1157"></div>
+      <figcaption><b>Architecture.</b> Grey: frozen. Teal: trainable. <b>01 — Encode segments:</b> both backbones produce per-patch features that are mask-pooled to one descriptor per segment and projected to a shared 128-dim space; VGGT additionally passes through DPT fusion of Aggregator layers 5 · 11 · 17 · 23 before pooling. <b>02 — Joint multi-view matching</b> (our main contribution): segment sets from all <em>N</em> views are tagged with learned view embeddings, concatenated into one sequence and refined by three joint self-attention layers, after which the DoubleSoftmax scorer reads off any requested pair (<em>i</em>, <em>j</em>). Colour denotes view, not object identity; attention links are schematic and the score map is a real model output.</figcaption>
+    </figure>
+  </div>
+
+  <div class="col">
+    <div class="heads">
+      <div class="head">
+        <span class="tag">(a) Pairwise · MASt3R</span>
+        <h4>SegMASt3R+LGv2</h4>
+        <p>A LightGlue-style attention head on frozen 24-dim MASt3R descriptors: three blocks of weight-shared self-attention, bidirectional cross-attention and an FFN.</p>
+        <span class="params">≈800K trainable</span>
+      </div>
+      <div class="head">
+        <span class="tag">(b) Pairwise · VGGT</span>
+        <h4>SegVGGT-DPT</h4>
+        <p>DPT fusion over four Aggregator depths restores boundary precision that single-layer pooling loses, then the same attention stack as (a).</p>
+        <span class="params">≈10.7M trainable</span>
+      </div>
+      <div class="head main">
+        <span class="tag">(c) Joint · Main contribution</span>
+        <h4>SegVGGT-DPT Joint</h4>
+        <p>Descriptor sets from all <em>N</em> views are concatenated into one sequence with learnable per-view embeddings and refined by three joint self-attention layers. Any pair can then be scored.</p>
+        <span class="params">Trained at N=4, evaluated at N ∈ {2,4,6,8}</span>
+      </div>
+    </div>
+
+    <h3>Why the backbone choice is forced</h3>
+    <p>MASt3R's features are <em>pair-dependent</em>: they cannot be computed without the second image, which suits a strong pairwise head but cannot be shared across a variable set of views. VGGT's Aggregator processes all input views in one shared sequence and its features are <em>pair-independent</em>. Joint multi-view matching is therefore only reachable on VGGT — the backbone comparison is a consequence of studying that axis, not an independent variable.</p>
+
+    <h3>Scoring and abstention</h3>
+    <p>From the scaled affinity between refined descriptors, a row-softmax and a column-softmax give two conditional distributions; the <em>DoubleSoftmax</em> score is the log of their product, which is large only when each segment is the other's best match. Not every segment has a counterpart — some are occluded, out of frame, or absent — so each carries a matchability logit, and the score matrix is augmented with a learnable dustbin row and column. A segment is matched only if both its matchability passes 0.5 and its best score exceeds the dustbin.</p>
+
+    <h3>Training</h3>
+    <ul class="facts">
+      <li><span class="k">Data</span><span class="v">ScanNet++, ground-truth correspondences from projected 3D instance annotations</span></li>
+      <li><span class="k">Segmenter</span><span class="v">SAM, class-agnostic; up to M<sub style="font-family:var(--font-mono);color:var(--muted)">max</sub> = 100 segments per image</span></li>
+      <li><span class="k">Objective</span><span class="v">Normalised NLL over ground-truth pairs + binary matchability cross-entropy, λ = 0.3</span></li>
+      <li><span class="k">Embedding</span><span class="v">D = 128 shared space; τ ≡ 1 for the MASt3R head, learned τ ≤ 1 for the VGGT heads</span></li>
+      <li><span class="k">Optimiser</span><span class="v">AdamW, lr 10⁻⁴, weight decay 10⁻⁴, 500 warmup steps, cosine schedule, bf16</span></li>
+      <li><span class="k">Hardware</span><span class="v">2 × NVIDIA RTX 5090 with DDP</span></li>
+      <li><span class="k">Inference</span><span class="v">173 ms per joint window at N = 4; 290 ms at N = 6 (measured on the robot capture below)</span></li>
+    </ul>
+    <p class="tcap" style="margin-top:14px">Clamping the learned DoubleSoftmax temperature to τ ≤ 1 cuts the dominant <em>false-dustbin</em> errors by 36% relative, re-allocating the error budget toward harder wrong-match cases. For this head, calibrated scoring rather than richer descriptors is the binding constraint.</p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="col">
+    <div class="eyebrow">04 — Results</div>
+    <h2>The winner depends on the viewpoint regime.</h2>
+    <p>All models are trained only on ScanNet++ and evaluated <em>zero-shot</em> on Replica (indoor) and Virtual KITTI 2 (outdoor driving). Pairs are stratified into four bins by relative camera rotation. The headline metric is AUPRC; R@1 and R@5 are query-weighted across bins.</p>
+  </div>
+
+  <div class="bleed" style="margin-top:30px">
+    <div class="tablewrap t-wide">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Model</th>
+            <th class="grp sep" colspan="4">AUPRC by bin</th>
+            <th class="grp sep" colspan="3">Overall</th>
+          </tr>
+          <tr>
+            <th class="sep">0–45°</th><th>45–90°</th><th>90–135°</th><th>135–180°</th>
+            <th class="sep">AUPRC</th><th>R@1</th><th>R@5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>vizEnc+Radio</td><td class="sep">41.91</td><td>38.99</td><td>41.25</td><td>38.36</td><td class="sep">40.69</td><td>58.20</td><td>79.04</td></tr>
+          <tr><td>LiftFeat</td><td class="sep">47.17</td><td>32.13</td><td>25.19</td><td>24.92</td><td class="sep">35.69</td><td>40.21</td><td>67.57</td></tr>
+          <tr><td>vizEnc+DINOv2</td><td class="sep">50.78</td><td>47.24</td><td>49.49</td><td>50.15</td><td class="sep">49.48</td><td>59.29</td><td>80.29</td></tr>
+          <tr><td>DA3 (Sequential)</td><td class="sep">69.36</td><td>55.91</td><td>38.99</td><td>33.23</td><td class="sep">54.29</td><td>73.96</td><td>73.96</td></tr>
+          <tr><td>SegMASt3R (Sinkhorn)</td><td class="sep">80.48</td><td>77.04</td><td><u class="second">79.83</u></td><td><b class="best">81.72</b></td><td class="sep">79.63</td><td><b class="best">81.45</b></td><td><b class="best">94.21</b></td></tr>
+          <tr class="ours rule-top"><td>SegVGGT-DPT (ours)</td><td class="sep">81.20</td><td>80.93</td><td>78.07</td><td>73.36</td><td class="sep">79.70</td><td>74.10</td><td>90.11</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT Joint, N=4 (ours)</td><td class="sep"><u class="second">81.66</u></td><td><u class="second">83.03</u></td><td><b class="best">81.85</b></td><td><u class="second">77.69</u></td><td class="sep"><u class="second">81.37</u></td><td>75.64</td><td>90.42</td></tr>
+          <tr class="ours"><td>SegMASt3R+LGv2 (ours)</td><td class="sep"><b class="best">91.17</b></td><td><b class="best">83.59</b></td><td>77.09</td><td>70.28</td><td class="sep"><b class="best">84.48</b></td><td><u class="second">77.46</u></td><td><u class="second">93.63</u></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap"><b>Table 1 — Replica</b> (indoor, 3,200 pairs, 28,022 queries). Best per column in <b class="best">bold</b>, second best <u class="second">underlined</u>. LGv2 takes overall AUPRC with +4.85 over the Sinkhorn baseline, concentrated at narrow baselines (+10.7 at 0–45°) — but at 135–180° it drops 11.4 points <em>below</em> that baseline. The learned head sharpens the regime well represented in training and extrapolates worse to low-overlap, high-rotation pairs. There the Joint head takes over, beating the pairwise DPT variant by 4.3 AUPRC at the widest bin.</p>
+  </div>
+
+  <div class="bleed" style="margin-top:44px">
+    <div class="tablewrap t-wide">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Model</th>
+            <th class="grp sep" colspan="4">AUPRC by bin</th>
+            <th class="grp sep" colspan="3">Overall</th>
+          </tr>
+          <tr>
+            <th class="sep">0–45°</th><th>45–90°</th><th>90–135°</th><th>135–180°</th>
+            <th class="sep">AUPRC</th><th>R@1</th><th>R@5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>vizEnc+Radio</td><td class="sep">29.01</td><td>28.29</td><td>23.47</td><td>21.12</td><td class="sep">27.54</td><td>43.38</td><td>66.89</td></tr>
+          <tr><td>vizEnc+DINOv2</td><td class="sep">31.86</td><td>31.05</td><td>25.50</td><td>23.40</td><td class="sep">30.22</td><td>46.68</td><td>70.34</td></tr>
+          <tr><td>LiftFeat</td><td class="sep">35.40</td><td>30.00</td><td>27.21</td><td>20.88</td><td class="sep">32.35</td><td>47.21</td><td>68.04</td></tr>
+          <tr><td>DA3 (Sequential)</td><td class="sep">43.64</td><td>43.29</td><td>35.84</td><td>26.53</td><td class="sep">40.67</td><td>53.74</td><td>75.40</td></tr>
+          <tr><td>SegMASt3R (Sinkhorn)</td><td class="sep"><u class="second">57.98</u></td><td>55.96</td><td>57.26</td><td>49.06</td><td class="sep"><u class="second">56.91</u></td><td><u class="second">63.67</u></td><td><u class="second">81.57</u></td></tr>
+          <tr class="ours rule-top"><td>SegVGGT-DPT (ours)</td><td class="sep">46.60</td><td><u class="second">58.69</u></td><td>68.72</td><td>73.29</td><td class="sep">52.28</td><td>42.80</td><td>67.27</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT Joint, N=4 (ours)</td><td class="sep">47.50</td><td>57.54</td><td><u class="second">70.10</u></td><td><u class="second">76.92</u></td><td class="sep">52.85</td><td>42.93</td><td>66.75</td></tr>
+          <tr class="ours"><td>SegMASt3R+LGv2 (ours)</td><td class="sep"><b class="best">79.94</b></td><td><b class="best">88.52</b></td><td><b class="best">92.16</b></td><td><b class="best">78.34</b></td><td class="sep"><b class="best">82.78</b></td><td><b class="best">73.25</b></td><td><b class="best">96.22</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap"><b>Table 2 — Virtual KITTI 2</b> (outdoor driving, 3,200 pairs, 10,308 queries), same protocol, also zero-shot. LGv2 reaches 82.78% overall, +25.87 over the Sinkhorn baseline and +30.50 over pairwise VGGT: MASt3R's explicit cross-view geometric coupling transfers from indoor training to outdoor driving better than VGGT's joint self-attention does. Both VGGT heads show an inverted, driving-specific angular pattern — they <em>rise</em> from the narrowest to the widest bin, consistent with difficulty separating near-identical segments at narrow baselines.</p>
+  </div>
+
+  <div class="bleed" style="margin-top:44px">
+    <figure>
+      <div class="figbox"><img src="static/images/fig2_bins.png" alt="Two line charts of AUPRC against relative camera rotation. On Replica the LGv2 curve starts highest and falls below the others past 90 degrees; on Virtual KITTI 2 it leads in every bin." width="2534" height="1550"></div>
+      <figcaption><b>Fig. 2 — No single head dominates.</b> On Replica, LGv2 leads at narrow baselines but is overtaken by Joint, and by the Sinkhorn baseline, past 90°. On Virtual KITTI 2 it dominates every bin. The crossover is the central observation: the best head depends on the viewpoint regime.</figcaption>
+    </figure>
+  </div>
+
+  <div class="col" style="margin-top:46px">
+    <h3 style="margin-top:0">In-domain check on real captured imagery</h3>
+    <p>Replica and Virtual KITTI 2 are both rendered. We therefore also report ScanNet++ validation on real captured imagery from held-out scenes — indoor and in-domain rather than zero-shot.</p>
+    <div class="tablewrap t-mid" style="margin-top:18px">
+      <table>
+        <thead><tr><th>Matcher</th><th class="sep">AUPRC</th><th>R@1</th><th>R@5</th></tr></thead>
+        <tbody>
+          <tr><td>SegMASt3R (Sinkhorn)</td><td class="sep">88.9</td><td>83.3</td><td>97.1</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT (ours)</td><td class="sep">89.6</td><td>82.2</td><td>97.6</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT Joint (ours)</td><td class="sep">90.6</td><td><b class="best">85.5</b></td><td>97.1</td></tr>
+          <tr class="ours"><td>SegMASt3R+LGv2 (ours)</td><td class="sep"><b class="best">91.0</b></td><td>85.4</td><td><b class="best">98.5</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap"><b>Table 3 — ScanNet++ validation,</b> held-out scenes. All three of our heads sit at or above the Sinkhorn baseline when the domain matches training.</p>
+  </div>
+</section>
+
+<section id="sweep">
+  <div class="col">
+    <div class="eyebrow">05 — How many views</div>
+    <h2>Extra views pay off only where overlap is scarce.</h2>
+    <p>The Joint model is trained at <em>N</em> = 4 and evaluated at <em>N</em> ∈ {2, 4, 6, 8} without retraining. Position-embedding indices 4–7 are never directly supervised, yet the model extrapolates without collapse — consistent with joint attention learning view-relative rather than view-absolute patterns.</p>
+  </div>
+  <div class="bleed" style="margin-top:26px">
+    <figure>
+      <div class="figbox"><img src="static/images/fig3_sweep.png" alt="Two line charts of AUPRC against the number of jointly attended views. Replica curves are flat; on Virtual KITTI 2 the widest-rotation curve rises by about seven points from N=2 to N=6." width="2776" height="1588"></div>
+      <figcaption><b>Fig. 3 — Effect of the number of jointly attended views.</b> On Replica, <em>N</em> has almost no effect (81.10–81.57 overall AUPRC): indoor scenes have dense per-view overlap, so extra views add little. On Virtual KITTI 2, <em>N</em> helps specifically at wide baselines — the 135–180° bin improves from 71.05 (<em>N</em>=2) to 78.22 (<em>N</em>=6) before saturating, while narrow bins stay flat at around 47.5%. Note the different <em>y</em>-ranges between panels.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="robot">
+  <div class="col">
+    <div class="eyebrow">06 — On a real robot</div>
+    <h2>Identity held across a moving camera.</h2>
+    <p>The Joint model, trained on ScanNet++ at <em>N</em> = 4, applied without retraining to a sequence captured by a robot at Skoltech. A sliding window of consecutive frames is matched in one joint pass over 60 windows; one colour per instance, kept across all views the model matched it in. Masks are FastSAM proposals rather than the ground-truth masks used in the benchmarks above, and the capture has no ground-truth identities — so this is qualitative evidence, and it is also the only setting here where the segmenter is the one a deployed system would actually run.</p>
+  </div>
+  <div class="bleed" style="margin-top:26px;display:grid;gap:30px">
+    <figure>
+      <div class="figbox"><video src="static/videos/joint_n4.mp4" poster="static/videos/joint_n4.jpg" controls loop muted playsinline preload="metadata" width="1402" height="242" style="width:100%;height:auto;display:block"></video></div>
+      <figcaption><b>Joint window, N = 4.</b> Four instances tracked, 11 links drawn in the window shown. 699 ms per batch of four, 173 ms per window.</figcaption>
+    </figure>
+    <figure>
+      <div class="figbox"><video src="static/videos/joint_n6.mp4" poster="static/videos/joint_n6.jpg" controls loop muted playsinline preload="metadata" width="1800" height="206" style="width:100%;height:auto;display:block"></video></div>
+      <figcaption><b>The same sequence at N = 6,</b> from the same checkpoint and with no retraining — the position-embedding indices beyond 3 were never directly supervised. Six instances, 21 links. Cost grows with the window: 1161 ms per batch, 290 ms per window. This is the Replica result of Fig. 3 seen from the other side: in a corridor with dense frame-to-frame overlap, the extra views mostly buy longer tracks rather than better matches, and the measured price of buying them is roughly 1.7× the runtime.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="navigation">
+  <div class="col">
+    <div class="eyebrow">07 — Closed loop</div>
+    <h2>Does better matching move the robot?</h2>
+    <p>Each matcher replaces the RoboHop online localizer for HM3D Instance Image Navigation, without retraining. The agent receives a reference image of a single object instance and must reach within 1 m geodesic distance. Every matcher sees the same episode list, map, masks and localizer settings — only the online matcher differs.</p>
+  </div>
+  <div class="bleed" style="margin-top:26px">
+    <div class="tablewrap t-mid">
+      <table>
+        <thead><tr><th>Online matcher</th><th class="sep">SR</th><th>SPL</th><th>Soft SPL</th></tr></thead>
+        <tbody>
+          <tr><td>Oracle (GT metric localizer)</td><td class="sep">78.43</td><td>78.33</td><td>84.29</td></tr>
+          <tr class="rule-top"><td>SuperPoint+LightGlue → segment vote</td><td class="sep">44.12</td><td>44.10</td><td>53.16</td></tr>
+          <tr><td>SegMASt3R (Sinkhorn)</td><td class="sep">42.16</td><td>42.36</td><td>52.21</td></tr>
+          <tr class="ours"><td>SegMASt3R+LGv2 (ours)</td><td class="sep">41.18</td><td>41.17</td><td>51.89</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT (pairwise, ours)</td><td class="sep">42.16</td><td>42.05</td><td>50.17</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT Joint (N=2, ours)</td><td class="sep">45.54</td><td>45.43</td><td>53.60</td></tr>
+          <tr class="ours"><td>SegVGGT-DPT Joint (N=4, ours)</td><td class="sep">43.14</td><td>43.03</td><td>53.45</td></tr>
+          <tr class="rule-top"><td>RoMa → segment vote</td><td class="sep">27.45</td><td>27.45</td><td>37.40</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap"><b>Table 4 — Closed-loop HM3D v2 val</b> (102 episodes, 36 scenes). Values are percentages, grouped by method rather than performance.</p>
+  </div>
+  <div class="col" style="margin-top:28px">
+    <div class="callout">
+      <p><b>No ranking is claimed among the direct matchers.</b> We test success with an exact McNemar test and per-episode SPL with a paired bootstrap, applying Holm correction across all 28 pairwise comparisons. The five direct segment-level configurations and the sparse keypoint baseline form one cluster (p = 0.442–0.860, with SPL intervals covering zero). Two separations survive correction: the oracle outperforms every matcher, and RoMa voted into masks falls below every direct segment-level matcher (p = 0.001–0.008). The supported gap is to the tested <em>dense</em> pixel-vote baseline, and it is not evidence against sparse aggregation or dense matchers in general.</p>
+    </div>
+  </div>
+</section>
+
+<section id="limitations">
+  <div class="col">
+    <div class="eyebrow">08 — Limitations</div>
+    <h2>What this evidence does not cover.</h2>
+    <ul class="plain">
+      <li>Training uses indoor ScanNet++ only; an outdoor source may close the Virtual KITTI 2 gap.</li>
+      <li>Quantitative real-image evaluation is indoor and in-domain (ScanNet++ validation), not zero-shot. The in-house capture in Fig. 4 is qualitative, with no ground-truth identities. Real outdoor transfer remains untested.</li>
+      <li>Matching quality is bounded by the supplied masks. A segmenter-sensitivity study across SAM granularity and FastSAM is left to future work.</li>
+      <li>Closed-loop evaluation is confined to simulated indoor navigation.</li>
+    </ul>
+    <p>Future work should test outdoor training data and extreme-rotation sampling, routing between pairwise and joint heads using deployment cues, real outdoor zero-shot transfer, and sensitivity to segmenter choice and granularity.</p>
+  </div>
+</section>
+
+<section id="bibtex">
+  <div class="col">
+    <div class="eyebrow">09 — Citation</div>
+    <h2>BibTeX</h2>
+    <div class="bib">
+      <button class="copy" id="copyBtn" type="button">Copy</button>
+      <pre id="bibtex">@inproceedings{fatykhoph2026muviseg,
+  title     = {MuViSeg: Multi-View Segment Correspondences from Dense Geometry Priors},
+  author    = {Fatykhoph, Denis and Akhtyamov, Timur and Pakulev, Konstantin
+               and Devchich, German and Ferrer, Gonzalo},
+  booktitle = {Asian Conference on Computer Vision (ACCV)},
+  year      = {2026}
+}</pre>
+    </div>
+    <p class="note" style="margin-top:14px">The authors used Anthropic's Claude to assist with code development. All content was reviewed and verified by the authors, who take full responsibility for the final work.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="col">
+    <div class="row">
+      <span>MuViSeg · ACCV 2026</span>
+      <span>Applied AI Institute, Moscow</span>
+      <span class="end">d.fatykhoph@applied-ai.ru</span>
+    </div>
+  </div>
+</footer>
+</div>
+
+<script>
+document.getElementById("copyBtn").addEventListener("click", function () {
+  var btn = this, text = document.getElementById("bibtex").textContent;
+  function done(ok){ btn.textContent = ok ? "Copied" : "Select & copy"; setTimeout(function(){ btn.textContent = "Copy"; }, 1800); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ selectBib(); done(false); });
+  } else { selectBib(); done(false); }
+});
+function selectBib(){
+  try{
+    var r = document.createRange(); r.selectNodeContents(document.getElementById("bibtex"));
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }catch(e){}
+}
+document.querySelectorAll('.nav-links a, .nav-mark').forEach(function(a){
+  a.addEventListener('click', function(e){
+    var href = this.getAttribute('href');
+    if (href.charAt(0) !== '#') return;
+    var t = document.querySelector(href);
+    if (t){ e.preventDefault(); t.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'}); }
+  });
+});
+</script>
+</body>
+</html>
