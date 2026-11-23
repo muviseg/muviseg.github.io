@@ -5,16 +5,19 @@ Project page for **MuViSeg: Multi-View Segment Correspondences from Dense Geomet
 Static site, no build step. Served by GitHub Pages from the repository root.
 
 ```
-index.html              the whole page (markup, styles and script in one file)
-static/images/          teaser, architecture, result figures
-static/videos/          joint-window demos on the robot capture (mp4 + poster frames)
-static/paper.pdf        the paper
-.nojekyll               tells GitHub Pages to serve files as-is, without Jekyll
+index.html                      the whole page (markup and styles in one file)
+static/images/teaser.jpg        teaser figure from the paper
+static/images/architecture.jpg  architecture figure from the paper
+static/images/auprc_by_bin.svg  AUPRC per rotation bin (paper Tables 1 and 2)
+static/images/n_sweep.svg       joint model at N = 2, 4, 6, 8 (released metrics_by_bin.json)
+static/videos/                  joint-window demos on the robot capture (mp4 + poster frames)
+static/og.jpg                   1200x630 link preview image
+static/paper.pdf                the paper
+.nojekyll                       tells GitHub Pages to serve files as-is, without Jekyll
 ```
 
-## Before going public
+Code: https://github.com/muviseg/muviseg-codeRelease
 
-- Replace `REPLACE_WITH_SITE_URL` in the `<head>` of `index.html` (3 places) with the live site
-  address, so link previews work on X, Telegram and Slack.
-- Fill in the arXiv and Code buttons in the hero — they currently point at `#`.
+## Before the camera-ready
+
 - Replace `static/paper.pdf` with the camera-ready version.
